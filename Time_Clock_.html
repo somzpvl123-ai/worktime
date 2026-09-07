@@ -192,6 +192,11 @@ function exportCSV(){
   a.download='timeclock_'+dkey(Date.now())+'.csv'; a.click();
 }
 
+  if(ses && Date.now()-ses.start > 16*3600000){
+  info.textContent = '⚠️ จับเวลาเกิน 16 ชม. — ลืมกดเลิกงานหรือเปล่า?';
+  info.style.color = 'var(--bad)';
+}
+
 function toggleTheme(){
   const t=document.body.dataset.theme==='dark'?'light':'dark';
   document.body.dataset.theme=t; localStorage.setItem('tc_theme',t);
