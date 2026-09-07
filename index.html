@@ -3,7 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <title>Time Clock — บันทึกเวลาทำงาน</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg:#f4f6fb; --card:#fff; --txt:#1c2333; --sub:#6b7280;
@@ -13,16 +17,17 @@
   --bg:#0f1420; --card:#1a2130; --txt:#e8ecf5; --sub:#94a3b8;
   --line:#2a3344; --pri:#3b82f6;
 }
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);color:var(--txt);
-  padding:20px;transition:.25s}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'Sarabun','Segoe UI',Tahoma,sans-serif;background:var(--bg);color:var(--txt);
+  padding:20px;transition:.25s;line-height:1.6}
 .wrap{max-width:900px;margin:0 auto}
 header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px}
-h1{font-size:22px}
+h1{font-size:22px;font-weight:800}
+h3{font-size:17px;font-weight:700}
 .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;margin-bottom:16px;
   box-shadow:0 2px 12px rgba(0,0,0,.05)}
 .clock{text-align:center}
-.time{font-size:52px;font-weight:700;letter-spacing:2px;font-variant-numeric:tabular-nums}
+.time{font-size:52px;font-weight:800;letter-spacing:2px;font-variant-numeric:tabular-nums}
 .date{color:var(--sub);margin-top:4px;font-size:15px}
 .timer{font-size:60px;font-weight:800;color:var(--pri);font-variant-numeric:tabular-nums;margin:14px 0}
 .status{display:inline-block;padding:6px 16px;border-radius:20px;font-size:14px;font-weight:600}
@@ -33,25 +38,32 @@ h1{font-size:22px}
 button{border:none;border-radius:12px;padding:14px 30px;font-size:16px;font-weight:600;
   cursor:pointer;transition:.15s;font-family:inherit}
 button:hover{transform:translateY(-2px);filter:brightness(1.08)}
-button:disabled{opacity:.35;cursor:not-allowed;transform:none}
+button:active{transform:translateY(0)}
+button:disabled{opacity:.35;cursor:not-allowed;transform:none;filter:none}
 .b-start{background:var(--ok);color:#fff}
 .b-end{background:var(--bad);color:#fff}
 .b-brk{background:var(--warn);color:#fff}
 .b-gh{background:transparent;color:var(--txt);border:1px solid var(--line);padding:9px 16px;font-size:14px}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
 .stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;text-align:center}
-.stat .v{font-size:26px;font-weight:700;color:var(--pri)}
+.stat .v{font-size:26px;font-weight:800;color:var(--pri)}
 .stat .l{font-size:13px;color:var(--sub);margin-top:4px}
 table{width:100%;border-collapse:collapse;font-size:14px}
 th,td{padding:11px 8px;text-align:left;border-bottom:1px solid var(--line)}
-th{color:var(--sub);font-size:12px;text-transform:uppercase;letter-spacing:.5px}
+th{color:var(--sub);font-size:12px;letter-spacing:.3px;font-weight:600}
 td.h{font-weight:700;color:var(--ok)}
 .del{background:none;color:var(--bad);padding:4px 8px;font-size:18px;border-radius:6px}
 .empty{text-align:center;color:var(--sub);padding:30px}
-.row{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.row{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px}
 .tools{display:flex;gap:8px;flex-wrap:wrap}
-@media(max-width:600px){.time{font-size:38px}.timer{font-size:44px}button{padding:12px 22px}
-  th:nth-child(4),td:nth-child(4){display:none}}
+.warn-txt{color:var(--bad);font-weight:600}
+@media(max-width:600px){
+  body{padding:14px}
+  .time{font-size:38px}.timer{font-size:44px}
+  button{padding:12px 22px;font-size:15px}
+  .card{padding:18px}
+  th:nth-child(4),td:nth-child(4){display:none}
+}
 </style>
 </head>
 <body>
@@ -101,17 +113,21 @@ const KEY='timeclock_logs', SES='timeclock_session';
 let logs = JSON.parse(localStorage.getItem(KEY)||'[]');
 let ses  = JSON.parse(localStorage.getItem(SES)||'null');
 
-const TH_D=['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
-const TH_M=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+/* ชื่อวัน — เต็ม / ย่อ (ห้ามใช้ slice กับภาษาไทย) */
+const TH_D =['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+const TH_DS=['อา.','จ.','อ.','พ.','พฤ.','ศ.','ส.'];
+const TH_M =['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 
 const pad=n=>String(n).padStart(2,'0');
 const hms=ms=>{const s=Math.floor(ms/1000);return pad(Math.floor(s/3600))+':'+pad(Math.floor(s%3600/60))+':'+pad(s%60)};
 const clk=ts=>{const d=new Date(ts);return pad(d.getHours())+':'+pad(d.getMinutes())};
 const dkey=ts=>{const d=new Date(ts);return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())};
-const thDate=ts=>{const d=new Date(ts);return TH_D[d.getDay()].slice(0,2)+' '+d.getDate()+' '+TH_M[d.getMonth()]+' '+(d.getFullYear()+543)};
+const thDate=ts=>{const d=new Date(ts);return TH_DS[d.getDay()]+' '+d.getDate()+' '+TH_M[d.getMonth()]+' '+(d.getFullYear()+543)};
 
-const save=()=>{localStorage.setItem(KEY,JSON.stringify(logs));
-  ses?localStorage.setItem(SES,JSON.stringify(ses)):localStorage.removeItem(SES)};
+const save=()=>{
+  localStorage.setItem(KEY,JSON.stringify(logs));
+  ses ? localStorage.setItem(SES,JSON.stringify(ses)) : localStorage.removeItem(SES);
+};
 
 /* ---------- ควบคุมการทำงาน ---------- */
 function startWork(){
@@ -137,73 +153,95 @@ function endWork(){
 function delLog(id){ if(confirm('ลบรายการนี้?')){ logs=logs.filter(l=>l.id!==id); save(); render(); } }
 function clearAll(){ if(confirm('ล้างประวัติทั้งหมด? กู้คืนไม่ได้')){ logs=[]; save(); render(); } }
 
-/* ---------- แสดงผล ---------- */
+/* ---------- นาฬิกา / ตัวจับเวลา ---------- */
 function tick(){
   const n=new Date();
-  now.textContent=pad(n.getHours())+':'+pad(n.getMinutes())+':'+pad(n.getSeconds());
-  today.textContent='วัน'+TH_D[n.getDay()]+'ที่ '+n.getDate()+' '+TH_M[n.getMonth()]+' '+(n.getFullYear()+543);
+  now.textContent = pad(n.getHours())+':'+pad(n.getMinutes())+':'+pad(n.getSeconds());
+  today.textContent = 'วัน'+TH_D[n.getDay()]+'ที่ '+n.getDate()+' '+TH_M[n.getMonth()]+' '+(n.getFullYear()+543);
+
   if(ses){
-    const brk = ses.breakMs + (ses.breakStart? Date.now()-ses.breakStart : 0);
-    elapsed.textContent = hms(Math.max(0, Date.now()-ses.start-brk));
+    const brk = ses.breakMs + (ses.breakStart ? Date.now()-ses.breakStart : 0);
+    const run = Math.max(0, Date.now()-ses.start-brk);
+    elapsed.textContent = hms(run);
+
+    /* เตือนเมื่อจับเวลาเกิน 16 ชม. — น่าจะลืมกดเลิกงาน */
+    if(Date.now()-ses.start > 16*3600000){
+      info.textContent = '⚠️ จับเวลาเกิน 16 ชม. — ลืมกดเลิกงานหรือเปล่า?';
+      info.className = 'date warn-txt';
+    }
   }
 }
 
+/* ---------- แสดงผลทั้งหมด ---------- */
 function render(){
   const onBreak = ses && ses.breakStart;
-  badge.className='status '+(!ses?'s-off':onBreak?'s-brk':'s-on');
-  badge.textContent = !ses?'ยังไม่เริ่มงาน' : onBreak?'กำลังพัก':'กำลังทำงาน';
-  bStart.disabled=!!ses; bBreak.disabled=!ses; bEnd.disabled=!ses;
-  bBreak.textContent = onBreak?'▶ กลับมาทำงาน':'☕ พัก';
-  info.textContent = ses ? 'เริ่มเมื่อ '+clk(ses.start)+' น.'+(ses.breakMs?' · พักไป '+Math.round(ses.breakMs/60000)+' นาที':'')
-                         : 'กดปุ่ม "เริ่มงาน" เพื่อเริ่มจับเวลา';
+
+  badge.className = 'status ' + (!ses ? 's-off' : onBreak ? 's-brk' : 's-on');
+  badge.textContent = !ses ? 'ยังไม่เริ่มงาน' : onBreak ? 'กำลังพัก' : 'กำลังทำงาน';
+
+  bStart.disabled = !!ses;
+  bBreak.disabled = !ses;
+  bEnd.disabled   = !ses;
+  bBreak.textContent = onBreak ? '▶ กลับมาทำงาน' : '☕ พัก';
+
+  info.className = 'date';
+  info.textContent = ses
+    ? 'เริ่มเมื่อ '+clk(ses.start)+' น.' + (ses.breakMs ? ' · พักไป '+Math.round(ses.breakMs/60000)+' นาที' : '')
+    : 'กดปุ่ม "เริ่มงาน" เพื่อเริ่มจับเวลา';
+
   if(!ses) elapsed.textContent='00:00:00';
   tick();
 
-  // สรุป
+  /* สรุปยอด */
   const tk=dkey(Date.now()), n=new Date();
   const sow=new Date(n); sow.setDate(n.getDate()-((n.getDay()+6)%7)); sow.setHours(0,0,0,0);
   const som=new Date(n.getFullYear(),n.getMonth(),1);
   const sum=f=>logs.filter(f).reduce((a,l)=>a+l.netMs,0);
   const hr=ms=>(ms/3600000).toFixed(2);
+
   stats.innerHTML=[
-    ['วันนี้', hr(sum(l=>l.date===tk))+' ชม.'],
-    ['สัปดาห์นี้', hr(sum(l=>l.start>=sow.getTime()))+' ชม.'],
-    ['เดือนนี้', hr(sum(l=>l.start>=som.getTime()))+' ชม.'],
-    ['รวมทั้งหมด', hr(sum(()=>true))+' ชม.'],
-    ['จำนวนวัน', new Set(logs.map(l=>l.date)).size+' วัน']
+    ['วันนี้',       hr(sum(l=>l.date===tk))+' ชม.'],
+    ['สัปดาห์นี้',   hr(sum(l=>l.start>=sow.getTime()))+' ชม.'],
+    ['เดือนนี้',     hr(sum(l=>l.start>=som.getTime()))+' ชม.'],
+    ['รวมทั้งหมด',   hr(sum(()=>true))+' ชม.'],
+    ['จำนวนวัน',    new Set(logs.map(l=>l.date)).size+' วัน']
   ].map(([l,v])=>`<div class="stat"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
 
-  // ตาราง
+  /* ตารางประวัติ */
   tbody.innerHTML = logs.length ? logs.map(l=>`<tr>
-    <td>${thDate(l.start)}</td><td>${clk(l.start)}</td><td>${clk(l.end)}</td>
-    <td>${l.breakMs?Math.round(l.breakMs/60000)+' น.':'—'}</td>
+    <td>${thDate(l.start)}</td>
+    <td>${clk(l.start)}</td>
+    <td>${clk(l.end)}</td>
+    <td>${l.breakMs ? Math.round(l.breakMs/60000)+' น.' : '—'}</td>
     <td class="h">${(l.netMs/3600000).toFixed(2)} ชม.</td>
     <td><button class="del" onclick="delLog(${l.id})">×</button></td></tr>`).join('')
     : '<tr><td colspan="6" class="empty">ยังไม่มีบันทึก — เริ่มกดปุ่มได้เลย</td></tr>';
 }
 
+/* ---------- Export CSV ---------- */
 function exportCSV(){
   if(!logs.length) return alert('ยังไม่มีข้อมูล');
   const rows=[['วันที่','เวลาเข้า','เวลาออก','พัก(นาที)','ชั่วโมงสุทธิ'],
     ...logs.map(l=>[l.date,clk(l.start),clk(l.end),Math.round(l.breakMs/60000),(l.netMs/3600000).toFixed(2)])];
   const csv='\uFEFF'+rows.map(r=>r.join(',')).join('\n');
   const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
-  a.download='timeclock_'+dkey(Date.now())+'.csv'; a.click();
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download='timeclock_'+dkey(Date.now())+'.csv';
+  a.click();
 }
 
-  if(ses && Date.now()-ses.start > 16*3600000){
-  info.textContent = '⚠️ จับเวลาเกิน 16 ชม. — ลืมกดเลิกงานหรือเปล่า?';
-  info.style.color = 'var(--bad)';
-}
-
+/* ---------- ธีม ---------- */
 function toggleTheme(){
-  const t=document.body.dataset.theme==='dark'?'light':'dark';
-  document.body.dataset.theme=t; localStorage.setItem('tc_theme',t);
+  const t = document.body.dataset.theme==='dark' ? 'light' : 'dark';
+  document.body.dataset.theme=t;
+  localStorage.setItem('tc_theme',t);
 }
-document.body.dataset.theme=localStorage.getItem('tc_theme')||'light';
+document.body.dataset.theme = localStorage.getItem('tc_theme') || 'light';
 
-render(); setInterval(tick,1000);
+/* ---------- เริ่มทำงาน ---------- */
+render();
+setInterval(tick,1000);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) render(); });
 window.addEventListener('beforeunload',save);
 </script>
 </body>
